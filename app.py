@@ -28,6 +28,7 @@ class AuthModel(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50))
     password = db.Column(db.String(100))
+    token    = db.Column(db.String(200))
 
 db.create_all()
 
@@ -37,10 +38,16 @@ class signup(Resource):
         dataPassword = request.form.get('password')
 
         if dataUsername and dataPassword:
-            dataModel = AuthModel(username=dataUsername, password=dataPassword)
+            tokenreg = jwt.encode(
+                {
+                    "username":dataUsername, 
+                    "exp":datetime.datetime.utcnow() + datetime.timedelta(minutes=120)
+                }, app.config['SECRET_KEY'], algorithm="HS256"
+            )
+            dataModel = AuthModel(username=dataUsername, password=dataPassword, token = tokenreg)
             db.session.add(dataModel)
             db.session.commit()
-            return make_response(jsonify({"success" : True}), 200)
+            return make_response(jsonify({"success" : True, "Token":tokenreg}), 200)
         return jsonify({"success" : False,"msg":"Username dan Password harus diisi"})
 
 class Login(Resource):
@@ -58,11 +65,25 @@ class Login(Resource):
                     "exp":datetime.datetime.utcnow() + datetime.timedelta(minutes=120)
                 }, app.config['SECRET_KEY'], algorithm="HS256"
             )
+            DB_user = AuthModel.query.filter_by(username=dataUsername).first()
+            DB_user.token = token
+            db.session.commit()
             return make_response(jsonify({"success" : True, "token":token}), 200)
         return jsonify({"success" : False})
 
-api.add_resource(signup, "/api/signup", methods=["POST"])
-api.add_resource(Login, "/api/login", methods=["POST"])
+class info(Resource):
+    def post(self):
+        dataToken = request.form.get('token')
+        queryToken = [data.token for data in AuthModel.query.all()]
+        if dataToken in queryToken:
+            DB_user = AuthModel.query.filter_by(token=dataToken).first()
+            return make_response(jsonify({"username": DB_user.username}), 200)
+        return jsonify({"success" : False})
+
+api.add_resource(signup, "/api/v1/signup", methods=["POST"])
+api.add_resource(Login, "/api/v1/login", methods=["POST"])
+api.add_resource(info, "/api/v2/users/info", methods=["POST"])
+
 
 if __name__ == "__main__":
     app.run(host='127.0.0.1', debug=True , port=4000)
