@@ -1,3 +1,7 @@
+#Nama Kelompok :
+#1 Efendi Kisnoto   19090057
+#2 Abbror Sholakhudin 19090141
+
 from flask import Flask, jsonify,request,flash,redirect
 from itsdangerous import json
 from werkzeug.utils import secure_filename
