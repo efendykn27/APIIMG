@@ -6,6 +6,8 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from flask_restful import Resource, Api
 import glob
+import datetime
+from sqlalchemy import Column, Integer, DateTime
 
 app = Flask(__name__)
 UPLOAD_FOLDER = 'hasil_upload'
@@ -16,6 +18,7 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 api = Api(app)
 db = SQLAlchemy(app)
 CORS(app)
+
 filename = os.path.dirname(os.path.abspath(__file__))
 database = 'sqlite:///' + os.path.join(filename, 'db_img.sqlite')
 app.config['SQLALCHEMY_DATABASE_URI'] = database
@@ -23,7 +26,9 @@ app.config['SECRET_KEY'] = "XXXXXX"
 
 class image_path(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    image_name= db.Column(db.String(100))
     path = db.Column(db.String(100))
+    datetime = db.Column(DateTime, default=datetime.datetime.now)
   
 db.create_all()
 
@@ -48,13 +53,15 @@ class index(Resource):
       filename = secure_filename(file.filename)
       file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
       path=("hasil_upload/"+filename)
-      dataModel = image_path(path=path)
+      dataModel = image_path(image_name = filename, path=path)
       db.session.add(dataModel)
       db.session.commit()
 
       return jsonify({
             "pesan":"gambar telah terupload",
-            "path":path
+            "image_name":filename,
+            "path":path,
+            #"datetime"=datetime('now')
           })
     else:
       return jsonify({
